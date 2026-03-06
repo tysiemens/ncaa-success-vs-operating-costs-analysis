@@ -1,0 +1,161 @@
+---
+title: "STT180 Honors Project"
+author: "Ty Siemens"
+date: "2025-04-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# NCAA Success and Expenses
+
+```{r}
+library(tidyverse)
+```
+
+
+## Data Cleaning
+
+```{r}
+CFBdata <- read.csv("NCAARevenueData.csv")
+CFBdata$Football.Total.Operating.Expenses <- as.numeric(gsub('[$,]', '', CFBdata$Football.Total.Operating.Expenses))
+```
+
+## Data Visualization
+
+### Team Strength vs Operating Expenses
+
+```{r}
+ggplot(CFBdata, aes(SRS, Football.Total.Operating.Expenses)) + 
+  geom_point() + 
+  labs(title = "Operating Expenses by Team Strength", x = "Team Strength (SRS)", y = "Operating Expenses")
+```
+
+```{r}
+ggplot(CFBdata, aes(SRS, Football.Total.Operating.Expenses, color=factor(Conf))) + geom_point() +
+  scale_color_manual(values = c(
+    "SEC" = "#FF9999",
+    "Big Ten" = "#FF6666",
+    "ACC" = "#FF3333",
+    "Pac-12" = "#CC0000",
+    "Big 12" = "#990000",
+    "American" = "#99CCFF",
+    "MWC" = "#66B2FF",
+    "Ind" = "#3399FF",
+    "CUSA" = "#0073E6",
+    "Sun Belt" = "#0059B3",
+    "MAC" = "#003366"
+  )) +
+  labs(title = "Operating Expenses by Team Strength", x = "Team Strength (SRS)", y = "Operating Expenses", color = "Conference")
+```
+
+```{r}
+ggplot(CFBdata, aes(SRS, Football.Total.Operating.Expenses)) + geom_point() + facet_wrap(~ Year) + 
+  labs(title = "Operating Expenses by Team Strength", x = "Team Strength (SRS)", y = "Operating Expenses")
+```
+
+### Slope Fit / By-Year
+
+```{r}
+mod.fit17 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2017))
+
+mod.fit18 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2018))
+
+mod.fit19 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2019))
+
+mod.fit20 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2020))
+
+mod.fit21 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2021))
+
+mod.fit22 <- lm(Football.Total.Operating.Expenses~SRS, data=subset(CFBdata, Year == 2022))
+
+```
+
+```{r}
+mod.fit17 %>% 
+  broom::glance()
+
+mod.fit18 %>% 
+  broom::glance()
+
+mod.fit19 %>% 
+  broom::glance()
+
+mod.fit20 %>% 
+  broom::glance()
+
+mod.fit21 %>% 
+  broom::glance()
+
+mod.fit22 %>% 
+  broom::glance()
+```
+
+```{r}
+library(broom)
+
+slope17 <-  tidy(mod.fit17)$estimate[2]
+slope18 <-  tidy(mod.fit18)$estimate[2]
+slope19 <-  tidy(mod.fit19)$estimate[2]
+slope20 <-  tidy(mod.fit20)$estimate[2]
+slope21 <-  tidy(mod.fit21)$estimate[2]
+slope22 <-  tidy(mod.fit22)$estimate[2]
+
+slopes <- c(slope17, slope18, slope19, slope20, slope21, slope22)
+
+slopesdf <- data.frame(
+  name = c('2017', '2018', '2019', '2020', '2021', '2022'),
+  value = slopes
+)
+
+
+ggplot(slopesdf, aes(name, value)) + 
+  geom_bar(stat='identity', fill = 'steelblue') +
+  labs(title = "Slopes by Year", x = "Year", y = "Slope") +
+  theme_minimal()
+```
+
+```{r}
+conf.by.year <- CFBdata %>% 
+  group_by(Conf, Year) %>% 
+  summarise(Avg.Expenses = mean(Football.Total.Operating.Expenses))
+
+ggplot(conf.by.year, aes(Year, Avg.Expenses, color=Conf)) + geom_line() + labs(title = "Operating Expenses by Year", x = "Year", y = "Expenses", color = "Conference")
+```
+
+### Strength and Operating Expenses Spread
+
+```{r}
+ggplot(CFBdata, aes(SRS)) + geom_histogram() + theme_minimal()
+```
+
+```{r}
+ggplot(CFBdata, aes(Football.Total.Operating.Expenses)) + geom_histogram() + theme_minimal()
+```
+
+```{r}
+ggplot(CFBdata, aes(Football.Total.Operating.Expenses, reorder(Conf, Football.Total.Operating.Expenses))) + geom_boxplot() + theme_minimal() + labs(title = "Operating Expenses by Conference", x = "Expenses", y = "Conference")
+```
+
+### Monetary Efficiency
+
+```{r}
+Monetary.Efficiency <- CFBdata %>% 
+  group_by(School) %>% 
+  summarise(monetary.efficiancy.metric = mean(SRS / Football.Total.Operating.Expenses)) %>% 
+  arrange(desc(monetary.efficiancy.metric))
+
+Monetary.Efficiency
+```
+
+```{r}
+team_avgs <- CFBdata %>% 
+  group_by(School) %>% 
+  summarise(avg.SRS = mean(SRS), avg.expenses = mean(Football.Total.Operating.Expenses))
+
+team_avgs
+```
